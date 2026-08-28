@@ -1,7 +1,7 @@
 /**
  * Monetary Authority of Singapore (MAS) Domestic Interest Rates - Daily API Service
  * Endpoint: https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_non610mssql/domestic_interest_rates_daily/views/domestic_interest_rates_daily
- * Header Requirement: KeyId: <api_key>
+ * Header Requirement: KeyId: <api_key> (read directly from environment variable VITE_MAS_API_KEY)
  * Data: Daily SORA + Compounded 1M / 3M / 6M SORA Averages
  */
 
@@ -81,25 +81,30 @@ function parseRecord(record: RawRecord, sourceName: string, isLive: boolean, isK
   };
 }
 
-export async function fetchMasDomesticInterestRates(apiKey?: string): Promise<MasDomesticInterestRateResponse> {
-  const masApiKey = (apiKey ?? import.meta.env.VITE_MAS_API_KEY ?? '').trim();
+/**
+ * Fetch domestic interest rates from MAS API Gateway using VITE_MAS_API_KEY
+ */
+export async function fetchMasDomesticInterestRates(apiKeyOverride?: string): Promise<MasDomesticInterestRateResponse> {
+  const masApiKey = (apiKeyOverride ?? import.meta.env.VITE_MAS_API_KEY ?? '').trim();
   const isKeyConfigured = Boolean(masApiKey.length > 0 && !masApiKey.includes('MY_MAS_API_KEY'));
 
-  // Required header: KeyId: <api_key> (when configured in environment variable VITE_MAS_API_KEY)
+  // Required header per MAS API Gateway specification: KeyId: <api_key>
   const headers: Record<string, string> = {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
   };
 
   if (isKeyConfigured) {
-    headers['KeyId'] = masApiKey; // Required header per MAS API Gateway specification
+    headers['KeyId'] = masApiKey;
   }
 
+  // Primary attempt: MAS API Gateway
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-    const response = await fetch(MAS_DOMESTIC_INTEREST_RATES_ENDPOINT, {
+    const queryUrl = `${MAS_DOMESTIC_INTEREST_RATES_ENDPOINT}?rows=10&sort=end_of_day%20desc`;
+    const response = await fetch(queryUrl, {
       method: 'GET',
       headers,
       signal: controller.signal
@@ -110,7 +115,6 @@ export async function fetchMasDomesticInterestRates(apiKey?: string): Promise<Ma
     if (response.ok) {
       const data = await response.json();
       
-      // Handle array or wrapped records
       let records: RawRecord[] = [];
       if (Array.isArray(data)) {
         records = data;
@@ -125,7 +129,6 @@ export async function fetchMasDomesticInterestRates(apiKey?: string): Promise<Ma
       }
 
       if (records.length > 0) {
-        // Find latest valid entry
         for (const rec of records) {
           const parsed = parseRecord(rec, 'MAS Domestic Interest Rates - Daily Gateway (Live)', true, isKeyConfigured);
           if (parsed) {
@@ -144,12 +147,16 @@ export async function fetchMasDomesticInterestRates(apiKey?: string): Promise<Ma
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3500);
 
+    const fallbackHeaders: Record<string, string> = {
+      'Accept': 'application/json',
+    };
+    if (isKeyConfigured) {
+      fallbackHeaders['KeyId'] = masApiKey;
+    }
+
     const response = await fetch(fallbackUrl, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'KeyId': masApiKey,
-      },
+      headers: fallbackHeaders,
       signal: controller.signal
     });
 
