@@ -85,12 +85,15 @@ export async function fetchMasDomesticInterestRates(apiKey?: string): Promise<Ma
   const masApiKey = (apiKey ?? import.meta.env.VITE_MAS_API_KEY ?? '').trim();
   const isKeyConfigured = Boolean(masApiKey.length > 0 && !masApiKey.includes('MY_MAS_API_KEY'));
 
-  // Required header: KeyId: <api_key>
+  // Required header: KeyId: <api_key> (when configured in environment variable VITE_MAS_API_KEY)
   const headers: Record<string, string> = {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
-    'KeyId': masApiKey, // Required header per MAS API Gateway specification
   };
+
+  if (isKeyConfigured) {
+    headers['KeyId'] = masApiKey; // Required header per MAS API Gateway specification
+  }
 
   try {
     const controller = new AbortController();

@@ -29,7 +29,6 @@ import {
   Compass,
   Cpu,
   RefreshCw,
-  Key,
   Database,
   ExternalLink,
   ChevronDown
@@ -73,8 +72,6 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
   const [hasSimulated, setHasSimulated] = useState<boolean>(true);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [simStepText, setSimStepText] = useState<string>('');
-  const [showApiKeyModal, setShowApiKeyModal] = useState<boolean>(false);
-  const [customApiKey, setCustomApiKey] = useState<string>('');
 
   // Initial silent probe of MAS API
   useEffect(() => {
@@ -142,7 +139,7 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
     await new Promise(r => setTimeout(r, 450));
     setSimStepText('2/3 Fetching dataset "Domestic Interest Rates - Daily" (3M Compounded SORA)...');
 
-    const result = await fetchMasDomesticInterestRates(customApiKey);
+    const result = await fetchMasDomesticInterestRates();
     setMasRateData(result);
 
     await new Promise(r => setTimeout(r, 450));
@@ -184,34 +181,23 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
           </div>
 
           {/* MAS Domestic Interest Rates API Status Pill */}
-          <div className="bg-[#1e2020] border border-[#333535] p-3.5 font-['JetBrains_Mono'] text-xs flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex items-center gap-2.5">
-              <Database className="w-4 h-4 text-[#c3f400] shrink-0" />
-              <div>
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                  <span className="text-white font-bold">Daily SORA: {masRateData.soraDaily.toFixed(2)}%</span>
-                  <span className="text-[#8e9379]">|</span>
-                  <span className="text-[#c3f400] font-bold">3M Comp: {masRateData.soraComp3M.toFixed(2)}%</span>
-                  <span className="text-[#8e9379]">|</span>
-                  <span className="text-white">1M: {masRateData.soraComp1M.toFixed(2)}%</span>
-                  <span className="text-[#8e9379]">|</span>
-                  <span className="text-white">6M: {masRateData.soraComp6M.toFixed(2)}%</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#c3f400] shrink-0"></span>
-                </div>
-                <span className="text-[#8e9379] block text-[10px] truncate max-w-md">
-                  MAS Daily Domestic Rates Gateway ({masRateData.asOfDate})
-                </span>
+          <div className="bg-[#1e2020] border border-[#333535] p-3.5 font-['JetBrains_Mono'] text-xs flex items-center gap-3">
+            <Database className="w-4 h-4 text-[#c3f400] shrink-0" />
+            <div>
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <span className="text-white font-bold">Daily SORA: {masRateData.soraDaily.toFixed(2)}%</span>
+                <span className="text-[#8e9379]">|</span>
+                <span className="text-white">1M: {masRateData.soraComp1M.toFixed(2)}%</span>
+                <span className="text-[#8e9379]">|</span>
+                <span className="text-[#c3f400] font-bold">3M: {masRateData.soraComp3M.toFixed(2)}%</span>
+                <span className="text-[#8e9379]">|</span>
+                <span className="text-white">6M: {masRateData.soraComp6M.toFixed(2)}%</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#c3f400] shrink-0"></span>
               </div>
+              <span className="text-[#8e9379] block text-[10px] truncate max-w-md">
+                MAS Daily Domestic Rates Gateway ({masRateData.asOfDate})
+              </span>
             </div>
-
-            <button
-              onClick={() => setShowApiKeyModal(true)}
-              className="text-[10px] text-[#c4c9ac] hover:text-[#c3f400] border border-[#444933] px-2.5 py-1.5 bg-[#121414] uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
-              title="Configure MAS API KeyId Header"
-            >
-              <Key className="w-3.5 h-3.5 text-[#c3f400]" />
-              <span>{masRateData.apiKeyConfigured ? 'Header KeyId: Set' : 'Header KeyId: Ready'}</span>
-            </button>
           </div>
         </div>
 
@@ -440,16 +426,16 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
                 <span className="w-2 h-2 rounded-full bg-[#c3f400]"></span>
                 <span>Daily SORA: <strong className="text-white">{masRateData.soraDaily.toFixed(2)}%</strong></span>
                 <span className="text-[#444933]">|</span>
-                <span>Compounded 1M: <strong className="text-white">{masRateData.soraComp1M.toFixed(2)}%</strong></span>
+                <span>1M: <strong className="text-white">{masRateData.soraComp1M.toFixed(2)}%</strong></span>
                 <span className="text-[#444933]">|</span>
                 <span>3M: <strong className="text-[#c3f400]">{masRateData.soraComp3M.toFixed(2)}%</strong></span>
                 <span className="text-[#444933]">|</span>
                 <span>6M: <strong className="text-white">{masRateData.soraComp6M.toFixed(2)}%</strong></span>
               </div>
               <div className="text-[11px] text-[#c4c9ac] flex items-center gap-2">
-                <span>Header: <code className="text-[#c3f400]">KeyId</code></span>
+                <span>Dataset: <span className="text-white">Domestic Interest Rates - Daily</span></span>
                 <span className="text-[#444933]">|</span>
-                <span>Date: <strong className="text-white">{masRateData.asOfDate}</strong></span>
+                <span>Synced: <strong className="text-white">{masRateData.asOfDate}</strong></span>
               </div>
             </div>
           )}
@@ -675,68 +661,6 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
         )}
 
       </div>
-
-      {/* MAS API Key Configuration Modal */}
-      {showApiKeyModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#1e2020] border-2 border-[#444933] w-full max-w-md p-6 lg:p-8 space-y-6 shadow-2xl text-[#e2e2e2] relative">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-[#c3f400]" />
-                <span className="font-['JetBrains_Mono'] text-xs text-[#c3f400] uppercase tracking-wider font-bold">
-                  MAS API KEYID HEADER CONFIGURATION
-                </span>
-              </div>
-              <h3 className="font-['Syne'] text-xl font-bold uppercase text-white">
-                Daily Domestic Interest Rates
-              </h3>
-              <p className="font-['Geist'] text-xs text-[#c4c9ac]">
-                Queries Daily SORA and 1M, 3M, 6M compounded averages. All requests send the <code className="text-[#c3f400] font-bold">KeyId:</code> header.
-              </p>
-            </div>
-
-            <div className="space-y-3 font-['JetBrains_Mono'] text-xs">
-              <div className="space-y-1">
-                <label className="text-[#8e9379] uppercase block text-[10px]">
-                  MAS KeyId (Header: KeyId:)
-                </label>
-                <input
-                  type="password"
-                  placeholder="Enter KeyId (or leave blank for public/benchmark mode)"
-                  value={customApiKey}
-                  onChange={(e) => setCustomApiKey(e.target.value)}
-                  className="w-full bg-[#121414] border border-[#444933] text-white p-3 focus:border-[#c3f400] focus:outline-none"
-                />
-              </div>
-
-              <div className="bg-[#121414] border border-[#333535] p-2.5 space-y-1 text-[10px] text-[#8e9379]">
-                <div><span className="text-[#c4c9ac]">Endpoint:</span> <code className="text-white break-all">https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_non610mssql/domestic_interest_rates_daily/views/domestic_interest_rates_daily</code></div>
-                <div><span className="text-[#c4c9ac]">Required Header:</span> <code className="text-[#c3f400]">KeyId: &lt;KeyId&gt;</code></div>
-                <div><span className="text-[#c4c9ac]">Metrics:</span> Daily SORA + 1M / 3M / 6M Compounded Averages</div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => {
-                  setShowApiKeyModal(false);
-                  handleRunSimulation();
-                }}
-                className="flex-1 bg-[#c3f400] hover:bg-white text-[#161e00] font-['JetBrains_Mono'] text-xs font-bold uppercase py-3 transition-colors cursor-pointer"
-              >
-                Save & Run Simulation
-              </button>
-              <button
-                onClick={() => setShowApiKeyModal(false)}
-                className="bg-transparent hover:bg-[#333535] text-[#c4c9ac] border border-[#444933] font-['JetBrains_Mono'] text-xs uppercase px-4 py-3 cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };
