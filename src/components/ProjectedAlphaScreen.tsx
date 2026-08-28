@@ -62,24 +62,33 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
     soraComp6M: 2.48,
     soraDaily: 2.40,
     asOfDate: new Date().toISOString().split('T')[0],
-    source: 'MAS Domestic Interest Rates - Daily API',
+    source: 'MAS Domestic Interest Rates - Daily Gateway',
     isLive: false,
-    apiKeyConfigured: Boolean(import.meta.env.VITE_MAS_API_KEY),
-    statusMessage: 'Ready to query MAS Domestic Interest Rates - Daily API dataset.'
+    apiKeyConfigured: Boolean(import.meta.env.MAS_SORA_API || import.meta.env.VITE_MAS_API_KEY),
+    statusMessage: 'Ready to query MAS Domestic Interest Rates dataset under MAS_SORA_API.'
   });
+  const [isRefreshingMas, setIsRefreshingMas] = useState<boolean>(false);
 
   // Simulation / Calculation state
   const [hasSimulated, setHasSimulated] = useState<boolean>(true);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [simStepText, setSimStepText] = useState<string>('');
 
-  // Initial silent probe of MAS API
-  useEffect(() => {
-    async function initMasRates() {
+  const syncMasRates = async () => {
+    setIsRefreshingMas(true);
+    try {
       const res = await fetchMasDomesticInterestRates();
       setMasRateData(res);
+    } catch (err) {
+      console.warn('Manual MAS sync notice:', err);
+    } finally {
+      setIsRefreshingMas(false);
     }
-    initMasRates();
+  };
+
+  // Initial silent probe of MAS API
+  useEffect(() => {
+    syncMasRates();
   }, []);
 
   // Compute all total and annualized costs dynamically using current active MAS 3M SORA
@@ -181,23 +190,34 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
           </div>
 
           {/* MAS Domestic Interest Rates API Status Pill */}
-          <div className="bg-[#1e2020] border border-[#333535] p-3.5 font-['JetBrains_Mono'] text-xs flex items-center gap-3">
-            <Database className="w-4 h-4 text-[#c3f400] shrink-0" />
-            <div>
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                <span className="text-white font-bold">Daily SORA: {masRateData.soraDaily.toFixed(2)}%</span>
-                <span className="text-[#8e9379]">|</span>
-                <span className="text-white">1M: {masRateData.soraComp1M.toFixed(2)}%</span>
-                <span className="text-[#8e9379]">|</span>
-                <span className="text-[#c3f400] font-bold">3M: {masRateData.soraComp3M.toFixed(2)}%</span>
-                <span className="text-[#8e9379]">|</span>
-                <span className="text-white">6M: {masRateData.soraComp6M.toFixed(2)}%</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#c3f400] shrink-0"></span>
+          <div className="bg-[#1e2020] border border-[#333535] p-3.5 font-['JetBrains_Mono'] text-xs flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Database className="w-4 h-4 text-[#c3f400] shrink-0" />
+              <div>
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <span className="text-white font-bold">Daily SORA: {masRateData.soraDaily.toFixed(2)}%</span>
+                  <span className="text-[#8e9379]">|</span>
+                  <span className="text-white">1M: {masRateData.soraComp1M.toFixed(2)}%</span>
+                  <span className="text-[#8e9379]">|</span>
+                  <span className="text-[#c3f400] font-bold">3M: {masRateData.soraComp3M.toFixed(2)}%</span>
+                  <span className="text-[#8e9379]">|</span>
+                  <span className="text-white">6M: {masRateData.soraComp6M.toFixed(2)}%</span>
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${masRateData.isLive ? 'bg-[#c3f400] animate-pulse' : 'bg-[#8e9379]'}`} title={masRateData.isLive ? 'Live MAS Gateway Stream' : 'MAS Official Benchmark'}></span>
+                </div>
+                <span className="text-[#8e9379] block text-[10px] truncate max-w-md">
+                  {masRateData.source} ({masRateData.asOfDate})
+                </span>
               </div>
-              <span className="text-[#8e9379] block text-[10px] truncate max-w-md">
-                MAS Daily Domestic Rates Gateway ({masRateData.asOfDate})
-              </span>
             </div>
+            <button
+              onClick={syncMasRates}
+              disabled={isRefreshingMas}
+              title="Re-query Monetary Authority of Singapore (MAS) Gateway"
+              className="px-2.5 py-1.5 bg-[#121414] hover:bg-[#333535] border border-[#444933] text-[#c3f400] text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingMas ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sync MAS</span>
+            </button>
           </div>
         </div>
 

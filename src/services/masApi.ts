@@ -1,7 +1,7 @@
 /**
  * Monetary Authority of Singapore (MAS) Domestic Interest Rates - Daily API Service
  * Endpoint: https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_non610mssql/domestic_interest_rates_daily/views/domestic_interest_rates_daily
- * Header Requirement: KeyId: <api_key> (read from environment variable MAS_SORA_API)
+ * Header Requirement: KeyId: <api_key> (read from environment variable MAS_SORA_API in Vercel)
  * Data: Daily SORA + Compounded 1M / 3M / 6M SORA Averages
  */
 
@@ -77,7 +77,7 @@ function parseRecord(record: RawRecord, sourceName: string, isLive: boolean, isK
     endpointUrl: MAS_DOMESTIC_INTEREST_RATES_ENDPOINT,
     isLive,
     apiKeyConfigured: isKeyConfigured,
-    statusMessage: `Synced Daily SORA (${validDaily.toFixed(2)}%) and Compounded 1M (${valid1M.toFixed(2)}%), 3M (${valid3M.toFixed(2)}%), 6M (${valid6M.toFixed(2)}%) averages.`
+    statusMessage: `Synced MAS SORA: Daily ${validDaily.toFixed(2)}% | 1M ${valid1M.toFixed(2)}% | 3M ${valid3M.toFixed(2)}% | 6M ${valid6M.toFixed(2)}%`
   };
 }
 
@@ -99,18 +99,50 @@ export async function fetchMasDomesticInterestRates(apiKeyOverride?: string): Pr
     !masApiKey.includes('MY_MAS_API_KEY')
   );
 
-  // Required header per MAS API Gateway specification: KeyId: <api_key>
-  const headers: Record<string, string> = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
+  // 1. Primary Attempt: Call serverless /api/mas-sora proxy (Vercel Serverless Function)
+  // This executes on Vercel's Node.js backend where process.env.MAS_SORA_API is injected directly with no browser CORS issues
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-  if (isKeyConfigured) {
-    headers['KeyId'] = masApiKey;
+    const apiProxyUrl = apiKeyOverride 
+      ? `/api/mas-sora?apiKey=${encodeURIComponent(apiKeyOverride)}` 
+      : '/api/mas-sora';
+
+    const response = await fetch(apiProxyUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data: MasDomesticInterestRateResponse = await response.json();
+      if (data && typeof data.soraComp3M === 'number' && data.soraComp3M > 0) {
+        return {
+          ...data,
+          apiKeyConfigured: data.apiKeyConfigured || isKeyConfigured
+        };
+      }
+    }
+  } catch (apiProxyErr) {
+    console.warn('Vercel serverless proxy /api/mas-sora attempt notice:', apiProxyErr);
   }
 
-  // Primary attempt: MAS API Gateway
+  // 2. Secondary Attempt: Direct client call to MAS API Gateway
   try {
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (isKeyConfigured) {
+      headers['KeyId'] = masApiKey;
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4500);
 
@@ -125,7 +157,6 @@ export async function fetchMasDomesticInterestRates(apiKeyOverride?: string): Pr
 
     if (response.ok) {
       const data = await response.json();
-      
       let records: RawRecord[] = [];
       if (Array.isArray(data)) {
         records = data;
@@ -149,10 +180,10 @@ export async function fetchMasDomesticInterestRates(apiKeyOverride?: string): Pr
       }
     }
   } catch (err) {
-    console.warn('MAS API Gateway fetch direct notice (querying dataset fallback):', err);
+    console.warn('Direct MAS Gateway fetch notice:', err);
   }
 
-  // Secondary fallback: MAS DataStore endpoint
+  // 3. Tertiary Attempt: MAS DataStore endpoint
   try {
     const fallbackUrl = 'https://eservices.mas.gov.sg/api/action/datastore/search.json?resource_id=9a0bf14e-fc42-461a-a019-7634d20914e9&limit=5&sort=end_of_day%20desc';
     const controller = new AbortController();
@@ -184,10 +215,10 @@ export async function fetchMasDomesticInterestRates(apiKeyOverride?: string): Pr
       }
     }
   } catch (fallbackErr) {
-    console.warn('MAS secondary fallback notice:', fallbackErr);
+    console.warn('MAS DataStore fallback notice:', fallbackErr);
   }
 
-  // Graceful verified daily published benchmark cache
+  // 4. Graceful verified daily published benchmark cache
   const today = new Date().toISOString().split('T')[0];
   return {
     soraComp3M: DEFAULT_MAS_3M_SORA,
@@ -195,7 +226,7 @@ export async function fetchMasDomesticInterestRates(apiKeyOverride?: string): Pr
     soraComp6M: DEFAULT_MAS_6M_SORA,
     soraDaily: DEFAULT_MAS_DAILY_SORA,
     asOfDate: today,
-    source: 'MAS Domestic Interest Rates - Daily (Official MAS Benchmark Cache)',
+    source: 'MAS Domestic Interest Rates - Daily (MAS Benchmark Cache)',
     endpointUrl: MAS_DOMESTIC_INTEREST_RATES_ENDPOINT,
     isLive: false,
     apiKeyConfigured: isKeyConfigured,

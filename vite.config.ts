@@ -8,7 +8,33 @@ export default defineConfig(({mode}) => {
   const masSoraApiKey = env.MAS_SORA_API || process.env.MAS_SORA_API || '';
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(), 
+      tailwindcss(),
+      {
+        name: 'mas-sora-api-middleware',
+        configureServer(server) {
+          server.middlewares.use('/api/mas-sora', async (req, res) => {
+            try {
+              const { default: handler } = await import('./api/mas-sora');
+              await handler(req, res);
+            } catch (err) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: String(err) }));
+            }
+          });
+          server.middlewares.use('/api/mas-rates', async (req, res) => {
+            try {
+              const { default: handler } = await import('./api/mas-sora');
+              await handler(req, res);
+            } catch (err) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: String(err) }));
+            }
+          });
+        }
+      }
+    ],
     define: {
       'import.meta.env.MAS_SORA_API': JSON.stringify(masSoraApiKey),
       'process.env.MAS_SORA_API': JSON.stringify(masSoraApiKey),
