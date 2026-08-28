@@ -166,7 +166,7 @@ export function computeComprehensiveSummary(
   loanParams: LoanParameters,
   quotations: QuotationPackage[],
   activeSoraBenchmark: number = CURRENT_3M_SORA,
-  soraMeta?: { asOfDate?: string; source?: string }
+  soraMeta?: { asOfDate?: string; source?: string; isFallback?: boolean; rateSourceType?: 'live' | 'fallback' }
 ): LoanCalculationSummary {
   const currentMonthlyPayment = calculateMonthlyPayment(
     loanParams.outstandingPrinciple,
@@ -183,6 +183,8 @@ export function computeComprehensiveSummary(
       currentAnnualCost,
       currentAnnualInterest,
       activeSoraBenchmark,
+      isSoraFallback: soraMeta?.isFallback ?? true,
+      soraRateSourceType: soraMeta?.rateSourceType ?? (soraMeta?.isFallback === false ? 'live' : 'fallback'),
       soraAsOfDate: soraMeta?.asOfDate,
       soraSource: soraMeta?.source,
       lowestCostPackage: null,
@@ -208,6 +210,8 @@ export function computeComprehensiveSummary(
     currentAnnualCost,
     currentAnnualInterest,
     activeSoraBenchmark,
+    isSoraFallback: soraMeta?.isFallback ?? true,
+    soraRateSourceType: soraMeta?.rateSourceType ?? (soraMeta?.isFallback === false ? 'live' : 'fallback'),
     soraAsOfDate: soraMeta?.asOfDate,
     soraSource: soraMeta?.source,
     lowestCostPackage: fullAnalyses[0] || null,

@@ -12,6 +12,8 @@ export interface MasDomesticInterestRateResponse {
   source: string;
   endpointUrl: string;
   isLive: boolean;
+  isFallback: boolean;
+  rateSourceType: 'live' | 'fallback';
   apiKeyConfigured: boolean;
   statusMessage: string;
 }
@@ -53,6 +55,8 @@ export async function fetchMasDomesticInterestRates(): Promise<MasDomesticIntere
           source: data.source || 'MAS Domestic Interest Rates Gateway (Live SORA)',
           endpointUrl: '/api/mas-sora',
           isLive: true,
+          isFallback: false,
+          rateSourceType: 'live',
           apiKeyConfigured: true,
           statusMessage: data.statusMessage || `Live MAS SORA Rates Connected: 1M ${data.soraComp1M}% | 3M ${data.soraComp3M}% | 6M ${data.soraComp6M}%`
         };
@@ -69,6 +73,8 @@ export async function fetchMasDomesticInterestRates(): Promise<MasDomesticIntere
           source: 'MAS SORA Benchmark (Baseline)',
           endpointUrl: '/api/mas-sora',
           isLive: false,
+          isFallback: true,
+          rateSourceType: 'fallback',
           apiKeyConfigured: false,
           statusMessage: 'MAS_SORA_API credential not configured in server environment'
         };
@@ -88,6 +94,8 @@ export async function fetchMasDomesticInterestRates(): Promise<MasDomesticIntere
     source: 'MAS SORA Benchmark (Baseline)',
     endpointUrl: '/api/mas-sora',
     isLive: false,
+    isFallback: true,
+    rateSourceType: 'fallback',
     apiKeyConfigured: false,
     statusMessage: 'Baseline MAS SORA Averages active'
   };

@@ -61,8 +61,10 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
     soraComp6M: 2.48,
     soraDaily: 2.40,
     asOfDate: new Date().toISOString().split('T')[0],
-    source: 'MAS Domestic Interest Rates Gateway',
+    source: 'MAS Domestic Interest Rates Gateway (Baseline)',
     isLive: false,
+    isFallback: true,
+    rateSourceType: 'fallback',
     apiKeyConfigured: false,
     statusMessage: 'Ready to query MAS Domestic Interest Rates via /api/mas-sora.'
   });
@@ -96,7 +98,12 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
       loanParams, 
       quotations, 
       masRateData.soraComp3M,
-      { asOfDate: masRateData.asOfDate, source: masRateData.source }
+      { 
+        asOfDate: masRateData.asOfDate, 
+        source: masRateData.source,
+        isFallback: masRateData.isFallback,
+        rateSourceType: masRateData.rateSourceType
+      }
     );
   }, [loanParams, quotations, masRateData]);
 
@@ -189,21 +196,44 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
           </div>
 
           {/* MAS Domestic Interest Rates API Status Pill */}
-          <div className="bg-[#1e2020] border border-[#333535] p-3.5 font-['JetBrains_Mono'] text-xs flex items-center justify-between gap-4">
+          <div className={`border p-3.5 font-['JetBrains_Mono'] text-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
+            masRateData.isFallback
+              ? 'bg-red-950/20 border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
+              : 'bg-[#1e2020] border-[#333535]'
+          }`}>
             <div className="flex items-center gap-3">
-              <Database className="w-4 h-4 text-[#c3f400] shrink-0" />
+              <Database className={`w-4 h-4 shrink-0 ${masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-[#c3f400]'}`} />
               <div>
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                  <span className="text-white font-bold">Daily SORA: {masRateData.soraDaily.toFixed(2)}%</span>
+                  <span className={masRateData.isFallback ? 'text-[#ff4d4f] font-bold' : 'text-white font-bold'}>
+                    Daily SORA: {masRateData.soraDaily.toFixed(2)}%
+                  </span>
                   <span className="text-[#8e9379]">|</span>
-                  <span className="text-white">1M: {masRateData.soraComp1M.toFixed(2)}%</span>
+                  <span className={masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-white'}>
+                    1M: {masRateData.soraComp1M.toFixed(2)}%
+                  </span>
                   <span className="text-[#8e9379]">|</span>
-                  <span className="text-[#c3f400] font-bold">3M: {masRateData.soraComp3M.toFixed(2)}%</span>
+                  <span className={masRateData.isFallback ? 'text-[#ff4d4f] font-extrabold' : 'text-[#c3f400] font-bold'}>
+                    3M: {masRateData.soraComp3M.toFixed(2)}%
+                  </span>
                   <span className="text-[#8e9379]">|</span>
-                  <span className="text-white">6M: {masRateData.soraComp6M.toFixed(2)}%</span>
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${masRateData.isLive ? 'bg-[#c3f400] animate-pulse' : 'bg-[#8e9379]'}`} title={masRateData.isLive ? 'Live MAS Gateway Stream' : 'MAS Official Benchmark'}></span>
+                  <span className={masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-white'}>
+                    6M: {masRateData.soraComp6M.toFixed(2)}%
+                  </span>
+                  
+                  {/* Status Badges */}
+                  {masRateData.isFallback ? (
+                    <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-extrabold uppercase bg-red-500/20 text-[#ff4d4f] border border-red-500/50">
+                      [Fallback / Offline Baseline]
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-extrabold uppercase bg-[#c3f400]/20 text-[#c3f400] border border-[#c3f400]/50">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#c3f400] animate-pulse"></span>
+                      Live MAS
+                    </span>
+                  )}
                 </div>
-                <span className="text-[#8e9379] block text-[10px] truncate max-w-md">
+                <span className={`block text-[10px] truncate max-w-md ${masRateData.isFallback ? 'text-red-400/80' : 'text-[#8e9379]'}`}>
                   {masRateData.source} ({masRateData.asOfDate})
                 </span>
               </div>
@@ -212,10 +242,14 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
               onClick={syncMasRates}
               disabled={isRefreshingMas}
               title="Re-query Monetary Authority of Singapore (MAS) Gateway"
-              className="px-2.5 py-1.5 bg-[#121414] hover:bg-[#333535] border border-[#444933] text-[#c3f400] text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+              className={`px-2.5 py-1.5 border text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shrink-0 ${
+                masRateData.isFallback
+                  ? 'bg-red-950/30 hover:bg-red-900/40 border-red-500/40 text-[#ff4d4f]'
+                  : 'bg-[#121414] hover:bg-[#333535] border-[#444933] text-[#c3f400]'
+              }`}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingMas ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Sync MAS</span>
+              <span className="hidden sm:inline">{isRefreshingMas ? 'Syncing...' : 'Sync MAS'}</span>
             </button>
           </div>
         </div>
@@ -372,6 +406,7 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
                   isLowestCost={analysis?.isLowestCost}
                   costRank={analysis?.costRank}
                   activeSoraRate={masRateData.soraComp3M}
+                  isSoraFallback={masRateData.isFallback}
                 />
               );
             })}
@@ -442,14 +477,25 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
           {!isSimulating && (
             <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[#333535] font-['JetBrains_Mono'] text-xs text-[#8e9379]">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#c3f400]"></span>
-                <span>Daily SORA: <strong className="text-white">{masRateData.soraDaily.toFixed(2)}%</strong></span>
+                <span className={`w-2 h-2 rounded-full ${masRateData.isFallback ? 'bg-[#ff4d4f]' : 'bg-[#c3f400]'}`}></span>
+                <span>Daily SORA: <strong className={masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-white'}>{masRateData.soraDaily.toFixed(2)}%</strong></span>
                 <span className="text-[#444933]">|</span>
-                <span>1M: <strong className="text-white">{masRateData.soraComp1M.toFixed(2)}%</strong></span>
+                <span>1M: <strong className={masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-white'}>{masRateData.soraComp1M.toFixed(2)}%</strong></span>
                 <span className="text-[#444933]">|</span>
-                <span>3M: <strong className="text-[#c3f400]">{masRateData.soraComp3M.toFixed(2)}%</strong></span>
+                <span>3M: <strong className={masRateData.isFallback ? 'text-[#ff4d4f] font-extrabold' : 'text-[#c3f400]'}>{masRateData.soraComp3M.toFixed(2)}%</strong></span>
                 <span className="text-[#444933]">|</span>
-                <span>6M: <strong className="text-white">{masRateData.soraComp6M.toFixed(2)}%</strong></span>
+                <span>6M: <strong className={masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-white'}>{masRateData.soraComp6M.toFixed(2)}%</strong></span>
+                
+                {masRateData.isFallback ? (
+                  <span className="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-red-500/20 text-[#ff4d4f] border border-red-500/40">
+                    [Fallback / Offline Baseline]
+                  </span>
+                ) : (
+                  <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-[#c3f400]/20 text-[#c3f400] border border-[#c3f400]/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#c3f400] animate-pulse"></span>
+                    Live MAS
+                  </span>
+                )}
               </div>
               <div className="text-[11px] text-[#c4c9ac] flex items-center gap-2">
                 <span>Dataset: <span className="text-white">Domestic Interest Rates - Daily</span></span>
@@ -493,9 +539,24 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
                       {lowestCost.quotation.bankName} — {lowestCost.quotation.packageName}
                     </h2>
                   </div>
-                  <span className="font-['JetBrains_Mono'] text-base text-[#c4c9ac] block">
-                    Rate Structure: <strong className="text-white">{lowestCost.quotation.rateDisplay}</strong>
-                  </span>
+                  <div className="font-['JetBrains_Mono'] text-base text-[#c4c9ac] flex flex-wrap items-center gap-2">
+                    <span>Rate Structure:</span>
+                    <strong className={lowestCost.quotation.rateType === 'floating_sora' && masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-white'}>
+                      {lowestCost.quotation.rateDisplay}
+                    </strong>
+                    {lowestCost.quotation.rateType === 'floating_sora' && (
+                      masRateData.isFallback ? (
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 bg-red-500/20 text-[#ff4d4f] border border-red-500/40 uppercase">
+                          [Fallback / Offline Baseline]
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 bg-[#c3f400]/20 text-[#c3f400] border border-[#c3f400]/40 uppercase flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#c3f400] animate-pulse"></span>
+                          Live MAS
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
 
                 {/* Big Metric Banner */}
@@ -636,8 +697,19 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
                             <div className="font-bold text-white">{analysis.quotation.bankName}</div>
                             <div className="text-[10px] text-[#8e9379]">{analysis.quotation.packageName}</div>
                           </td>
-                          <td className="py-4 px-4 font-bold text-[#c3f400]">
-                            {analysis.quotation.nominalRate.toFixed(2)}%
+                          <td className="py-4 px-4 font-bold">
+                            <div className="flex flex-col">
+                              <span className={analysis.quotation.rateType === 'floating_sora' && masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-[#c3f400]'}>
+                                {analysis.quotation.nominalRate.toFixed(2)}%
+                              </span>
+                              {analysis.quotation.rateType === 'floating_sora' && (
+                                <span className={`text-[9px] font-normal uppercase ${
+                                  masRateData.isFallback ? 'text-[#ff4d4f]' : 'text-[#8e9379]'
+                                }`}>
+                                  {masRateData.isFallback ? '[Fallback / Offline]' : '[Live MAS 3M]'}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-4 px-4 text-white font-bold">
                             ${analysis.monthlyPayment.toLocaleString()}

@@ -83,6 +83,8 @@ function parseMasRecord(record: RawRecord) {
       source: 'MAS Domestic Interest Rates - Daily (Live)',
       endpointUrl: MAS_ENDPOINT,
       isLive: true,
+      isFallback: false,
+      rateSourceType: 'live',
       apiKeyConfigured: true,
       statusMessage: `Live MAS SORA: Daily ${finalDaily.toFixed(2)}% | 1M ${final1M.toFixed(2)}% | 3M ${final3M.toFixed(2)}% | 6M ${final6M.toFixed(2)}%`
     };

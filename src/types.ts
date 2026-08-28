@@ -53,6 +53,8 @@ export interface LoanCalculationSummary {
   currentAnnualCost: number;
   currentAnnualInterest: number;
   activeSoraBenchmark: number;
+  isSoraFallback?: boolean;
+  soraRateSourceType?: 'live' | 'fallback';
   soraAsOfDate?: string;
   soraSource?: string;
   lowestCostPackage: PackageCostAnalysis | null;

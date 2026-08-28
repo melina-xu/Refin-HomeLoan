@@ -12,6 +12,7 @@ interface QuotationCardEditorProps {
   isLowestCost?: boolean;
   costRank?: number;
   activeSoraRate?: number;
+  isSoraFallback?: boolean;
 }
 
 export const QuotationCardEditor: React.FC<QuotationCardEditorProps> = ({
@@ -22,7 +23,8 @@ export const QuotationCardEditor: React.FC<QuotationCardEditorProps> = ({
   canRemove,
   isLowestCost,
   costRank,
-  activeSoraRate = 2.45
+  activeSoraRate = 2.45,
+  isSoraFallback = true
 }) => {
   const handleRateTypeChange = (rateType: RateType) => {
     if (rateType === 'fixed') {
@@ -229,16 +231,28 @@ export const QuotationCardEditor: React.FC<QuotationCardEditorProps> = ({
             <div className="space-y-2">
               {/* Floating: Bank Spread over SORA */}
               <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center gap-1">
                   <label className="text-[#8e9379] uppercase tracking-wider block text-[10px]">
                     Bank Spread over 3M SORA (%)
                   </label>
-                  <span className="text-[10px] text-[#c4c9ac]">
-                    Base: 3M SORA ({activeSoraRate.toFixed(2)}%)
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-semibold ${isSoraFallback ? 'text-[#ff4d4f]' : 'text-[#c4c9ac]'}`}>
+                      Base: 3M SORA ({activeSoraRate.toFixed(2)}%)
+                    </span>
+                    {isSoraFallback ? (
+                      <span className="inline-flex items-center px-1.5 py-0.2 text-[9px] font-bold uppercase bg-red-500/15 text-[#ff4d4f] border border-red-500/30">
+                        [Fallback / Offline Baseline]
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 text-[9px] font-bold uppercase bg-[#c3f400]/15 text-[#c3f400] border border-[#c3f400]/40">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#c3f400] animate-pulse"></span>
+                        Live MAS
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-[#c3f400] font-bold text-xs">+</span>
+                  <span className={`absolute left-3 top-2 font-bold text-xs ${isSoraFallback ? 'text-[#ff4d4f]' : 'text-[#c3f400]'}`}>+</span>
                   <input
                     type="number"
                     step="0.01"
@@ -246,14 +260,26 @@ export const QuotationCardEditor: React.FC<QuotationCardEditorProps> = ({
                     max="5"
                     value={quotation.soraSpread ?? 0.50}
                     onChange={(e) => handleFloatingSpreadChange(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-[#121414] border border-[#444933] text-white text-base font-bold p-2 pl-7 pr-8 focus:border-[#c3f400] focus:outline-none"
+                    className={`w-full bg-[#121414] border text-white text-base font-bold p-2 pl-7 pr-8 focus:outline-none ${
+                      isSoraFallback 
+                        ? 'border-red-500/50 focus:border-red-500' 
+                        : 'border-[#444933] focus:border-[#c3f400]'
+                    }`}
                   />
-                  <span className="absolute right-3 top-2 text-[#c3f400] font-bold text-xs">%</span>
+                  <span className={`absolute right-3 top-2 font-bold text-xs ${isSoraFallback ? 'text-[#ff4d4f]' : 'text-[#c3f400]'}`}>%</span>
                 </div>
               </div>
-              <p className="text-[10px] text-[#8e9379] italic">
-                * Live 3M Compounded SORA is synced directly from the MAS Domestic Interest Rates API upon simulation.
-              </p>
+              <div className="text-[10px] flex items-center justify-between gap-1">
+                {isSoraFallback ? (
+                  <span className="text-[#ff4d4f] italic">
+                    * Using Offline Baseline 3M SORA ({activeSoraRate.toFixed(2)}%). Live MAS API disconnected.
+                  </span>
+                ) : (
+                  <span className="text-[#8e9379] italic">
+                    * Live 3M Compounded SORA benchmark synced from MAS Gateway API.
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -261,14 +287,35 @@ export const QuotationCardEditor: React.FC<QuotationCardEditorProps> = ({
       </div>
 
       {/* Effective Rate Pill footer */}
-      <div className="bg-[#121414] border border-[#2d3030] p-3 flex justify-between items-center font-['JetBrains_Mono'] mt-3">
+      <div className={`p-3 flex flex-wrap justify-between items-center font-['JetBrains_Mono'] mt-3 border ${
+        quotation.rateType === 'floating_sora' && isSoraFallback
+          ? 'bg-red-950/20 border-red-500/30'
+          : 'bg-[#121414] border-[#2d3030]'
+      }`}>
         <span className="text-[11px] text-[#8e9379] uppercase">Effective Rate:</span>
-        <span className="text-sm font-extrabold text-[#c3f400]">
-          {quotation.rateType === 'fixed' 
-            ? `${(quotation.fixedRate ?? quotation.nominalRate).toFixed(2)}% p.a.` 
-            : `3M SORA + ${(quotation.soraSpread ?? 0.50).toFixed(2)}% (${effectiveRate.toFixed(2)}%)`
-          }
-        </span>
+        <div className="flex items-center gap-2">
+          {quotation.rateType === 'fixed' ? (
+            <span className="text-sm font-extrabold text-[#c3f400]">
+              {(quotation.fixedRate ?? quotation.nominalRate).toFixed(2)}% p.a.
+            </span>
+          ) : (
+            <>
+              <span className={`text-sm font-extrabold ${isSoraFallback ? 'text-[#ff4d4f]' : 'text-[#c3f400]'}`}>
+                3M SORA + {(quotation.soraSpread ?? 0.50).toFixed(2)}% ({effectiveRate.toFixed(2)}%)
+              </span>
+              {isSoraFallback ? (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 bg-red-500/20 text-[#ff4d4f] border border-red-500/40 uppercase whitespace-nowrap">
+                  [Fallback / Offline Baseline]
+                </span>
+              ) : (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 bg-[#c3f400]/20 text-[#c3f400] border border-[#c3f400]/40 uppercase flex items-center gap-1 whitespace-nowrap">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#c3f400] animate-pulse"></span>
+                  Live MAS
+                </span>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
