@@ -1,7 +1,7 @@
 /**
  * Monetary Authority of Singapore (MAS) Domestic Interest Rates - Daily API Service
  * Endpoint: https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_non610mssql/domestic_interest_rates_daily/views/domestic_interest_rates_daily
- * Header Requirement: KeyId: <api_key> (read directly from environment variable VITE_MAS_API_KEY)
+ * Header Requirement: KeyId: <api_key> (read from environment variable MAS_SORA_API)
  * Data: Daily SORA + Compounded 1M / 3M / 6M SORA Averages
  */
 
@@ -82,11 +82,22 @@ function parseRecord(record: RawRecord, sourceName: string, isLive: boolean, isK
 }
 
 /**
- * Fetch domestic interest rates from MAS API Gateway using VITE_MAS_API_KEY
+ * Fetch domestic interest rates from MAS API Gateway using MAS_SORA_API
  */
 export async function fetchMasDomesticInterestRates(apiKeyOverride?: string): Promise<MasDomesticInterestRateResponse> {
-  const masApiKey = (apiKeyOverride ?? import.meta.env.VITE_MAS_API_KEY ?? '').trim();
-  const isKeyConfigured = Boolean(masApiKey.length > 0 && !masApiKey.includes('MY_MAS_API_KEY'));
+  const masApiKey = (
+    apiKeyOverride ??
+    import.meta.env.MAS_SORA_API ??
+    (typeof process !== 'undefined' && process.env?.MAS_SORA_API ? process.env.MAS_SORA_API : '') ??
+    import.meta.env.VITE_MAS_API_KEY ??
+    ''
+  ).trim();
+
+  const isKeyConfigured = Boolean(
+    masApiKey.length > 0 &&
+    !masApiKey.includes('MY_MAS_SORA_API') &&
+    !masApiKey.includes('MY_MAS_API_KEY')
+  );
 
   // Required header per MAS API Gateway specification: KeyId: <api_key>
   const headers: Record<string, string> = {
