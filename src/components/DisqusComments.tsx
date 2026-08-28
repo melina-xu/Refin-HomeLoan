@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { MessageSquare } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { MessageSquare, RefreshCw, ExternalLink } from 'lucide-react';
 
 interface DisqusCommentsProps {
   pageUrl?: string;
@@ -31,39 +31,71 @@ export const DisqusComments: React.FC<DisqusCommentsProps> = ({
   pageIdentifier = 'refin-homeloan-main',
   title = 'Mortgage Arbitrage & Refinancing Discussion'
 }) => {
+  const [loadError, setLoadError] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState<number>(0);
+
   useEffect(() => {
-    const currentUrl = pageUrl || window.location.href;
-
-    // Window disqus_config definition
-    window.disqus_config = function (this: DisqusContext) {
-      this.page.url = currentUrl;
-      this.page.identifier = pageIdentifier;
-      this.page.title = title;
-    };
-
-    if (window.DISQUS) {
-      // If Disqus script is already present, trigger reset for new identifier/url
-      window.DISQUS.reset({
-        reload: true,
-        config: function (this: DisqusContext) {
-          this.page.url = currentUrl;
-          this.page.identifier = pageIdentifier;
-          this.page.title = title;
+    try {
+      // Determine canonical URL safely
+      let currentUrl = pageUrl;
+      if (!currentUrl) {
+        try {
+          currentUrl = window.location.href;
+        } catch {
+          currentUrl = 'https://refi-cyan.vercel.app';
         }
-      });
-    } else {
-      // Inject Disqus universal embed script
-      const d = document;
-      const existingScript = d.querySelector('script[src="https://https-refi-cyan-vercel-app.disqus.com/embed.js"]');
-      if (!existingScript) {
-        const s = d.createElement('script');
-        s.src = 'https://https-refi-cyan-vercel-app.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', String(+new Date()));
-        s.async = true;
-        (d.head || d.body).appendChild(s);
       }
+
+      // Configure disqus
+      window.disqus_config = function (this: DisqusContext) {
+        this.page.url = currentUrl;
+        this.page.identifier = pageIdentifier;
+        this.page.title = title;
+      };
+
+      if (window.DISQUS) {
+        // If Disqus script is already present, trigger reset for new identifier/url
+        window.DISQUS.reset({
+          reload: true,
+          config: function (this: DisqusContext) {
+            this.page.url = currentUrl;
+            this.page.identifier = pageIdentifier;
+            this.page.title = title;
+          }
+        });
+      } else {
+        const d = document;
+        const scriptId = 'disqus-embed-script';
+        let existingScript = d.getElementById(scriptId) as HTMLScriptElement | null;
+        
+        if (!existingScript) {
+          const s = d.createElement('script');
+          s.id = scriptId;
+          s.src = 'https://https-refi-cyan-vercel-app.disqus.com/embed.js';
+          s.setAttribute('data-timestamp', String(+new Date()));
+          s.async = true;
+          s.crossOrigin = 'anonymous';
+
+          s.onerror = () => {
+            setLoadError(true);
+          };
+
+          (d.head || d.body).appendChild(s);
+        }
+      }
+    } catch (err) {
+      console.warn('Disqus embed initialization notice:', err);
     }
-  }, [pageUrl, pageIdentifier, title]);
+  }, [pageUrl, pageIdentifier, title, retryCount]);
+
+  const handleRetry = () => {
+    setLoadError(false);
+    const existing = document.getElementById('disqus-embed-script');
+    if (existing) {
+      existing.remove();
+    }
+    setRetryCount(prev => prev + 1);
+  };
 
   return (
     <section className="w-full max-w-[1280px] mx-auto px-6 lg:px-16 py-12" id="disqus-discussion-section">
@@ -90,16 +122,42 @@ export const DisqusComments: React.FC<DisqusCommentsProps> = ({
           </span>
         </div>
 
-        {/* Disqus Embed Container */}
-        <div className="pt-2">
-          <div id="disqus_thread" className="min-h-[220px]"></div>
-          <noscript>
-            Please enable JavaScript to view the{' '}
-            <a href="https://disqus.com/?ref_noscript" className="text-[#c3f400] underline" rel="noreferrer" target="_blank">
-              comments powered by Disqus.
-            </a>
-          </noscript>
-        </div>
+        {/* Error Fallback Notice if third-party script is blocked or network errors occur */}
+        {loadError ? (
+          <div className="bg-[#121414] border border-[#444933] p-5 font-['JetBrains_Mono'] text-xs space-y-3">
+            <p className="text-[#c4c9ac]">
+              Disqus comments widget could not connect directly (often due to browser ad-blocking or sandboxed preview protections).
+            </p>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={handleRetry}
+                className="bg-[#c3f400] text-[#161e00] px-3.5 py-1.5 font-bold uppercase hover:bg-white transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Retry Connection
+              </button>
+              <a
+                href="https://disqus.com/home/forums/https-refi-cyan-vercel-app/"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-[#c3f400] hover:underline flex items-center gap-1 py-1.5"
+              >
+                Open Disqus Discussion Forum <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        ) : (
+          /* Disqus Embed Container */
+          <div className="pt-2">
+            <div id="disqus_thread" className="min-h-[220px]"></div>
+            <noscript>
+              Please enable JavaScript to view the{' '}
+              <a href="https://disqus.com/?ref_noscript" className="text-[#c3f400] underline" rel="noreferrer" target="_blank">
+                comments powered by Disqus.
+              </a>
+            </noscript>
+          </div>
+        )}
       </div>
     </section>
   );
