@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { PropertySelectorScreen } from './components/PropertySelectorScreen';
 import { ProjectedAlphaScreen } from './components/ProjectedAlphaScreen';
 import { MethodologyScreen } from './components/MethodologyScreen';
+import { DisqusComments } from './components/DisqusComments';
 import { Footer } from './components/Footer';
 
 // Modals
@@ -124,6 +125,9 @@ export function App() {
             onOpenWhatsApp={handleOpenWhatsApp}
           />
         )}
+
+        {/* Community Discussion & Inquiries via Disqus */}
+        <DisqusComments pageIdentifier={`refin-homeloan-${activeTab}`} />
 
       </main>
 
