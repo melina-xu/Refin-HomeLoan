@@ -1,0 +1,6 @@
+{
+  "name": "Refi. - Mortgage Optimization & Brutalist Loan Architectures",
+  "description": "An avant-garde brutalist mortgage refinancing and repricing optimization platform with live 5-quote comparison, annualized cost calculations, and lowest cost highlighting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

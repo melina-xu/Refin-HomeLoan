@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Geist', sans-serif;
+
+  --color-primary-fixed: #c3f400;
+  --color-on-primary-fixed: #161e00;
+  --color-surface: #121414;
+  --color-surface-dim: #121414;
+  --color-surface-bright: #38393a;
+  --color-surface-container-lowest: #0c0f0f;
+  --color-surface-container-low: #1a1c1c;
+  --color-surface-container: #1e2020;
+  --color-surface-container-high: #282a2b;
+  --color-surface-container-highest: #333535;
+  --color-outline: #8e9379;
+  --color-outline-variant: #444933;
+  --color-on-surface: #e2e2e2;
+  --color-on-surface-variant: #c4c9ac;
+}
+
+@layer base {
+  body {
+    font-family: 'Geist', sans-serif;
+    background-color: #121414;
+    color: #e2e2e2;
+  }
+}
+
+.font-display-lg {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.font-headline-lg {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.font-headline-md {
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+}
+
+.font-data-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+.font-label-caps {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #121414;
+}
+::-webkit-scrollbar-thumb {
+  background: #333535;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c3f400;
+}
