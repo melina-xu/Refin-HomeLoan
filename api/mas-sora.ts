@@ -1,5 +1,5 @@
 // Vercel Serverless Function: MAS SORA Domestic Interest Rates API Proxy
-// This runs on Vercel serverless Node.js runtime, reading process.env.MAS_SORA_API
+// Any API key, token, or credential is read ONLY inside files in the repo-root api/ directory via process.env.[EXACT_NAME]
 
 const MAS_PRIMARY_ENDPOINT = 'https://eservices.mas.gov.sg/apimg-gw/server/monthly_statistical_bulletin_non610mssql/domestic_interest_rates_daily/views/domestic_interest_rates_daily';
 const MAS_DATASTORE_ENDPOINT = 'https://eservices.mas.gov.sg/api/action/datastore/search.json?resource_id=9a0bf14e-fc42-461a-a019-7634d20914e9&limit=10&sort=end_of_day%20desc';
@@ -40,7 +40,7 @@ function findDate(obj: Record<string, unknown>): string {
   return new Date().toISOString().split('T')[0];
 }
 
-function parseRecord(record: RawRecord, sourceName: string, isLive: boolean, apiKeyConfigured: boolean) {
+function parseRecord(record: RawRecord, sourceName: string) {
   if (!record || typeof record !== 'object') return null;
 
   const valid1M = findValueByKeys(record as Record<string, unknown>, [
@@ -64,7 +64,6 @@ function parseRecord(record: RawRecord, sourceName: string, isLive: boolean, api
 
   const dateStr = findDate(record as Record<string, unknown>);
 
-  // Require at least one valid compounded figure or daily figure to consider the record valid
   if (!valid1M && !valid3M && !valid6M && !validDaily) {
     return null;
   }
@@ -82,8 +81,8 @@ function parseRecord(record: RawRecord, sourceName: string, isLive: boolean, api
     asOfDate: dateStr,
     source: sourceName,
     endpointUrl: MAS_PRIMARY_ENDPOINT,
-    isLive,
-    apiKeyConfigured,
+    isLive: true,
+    apiKeyConfigured: true,
     statusMessage: `MAS SORA Compounded Averages: 1M ${sora1M.toFixed(2)}% | 3M ${sora3M.toFixed(2)}% | 6M ${sora6M.toFixed(2)}% (Daily: ${soraDaily.toFixed(2)}%)`
   };
 }
@@ -101,28 +100,25 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  const apiKey = (
-    process.env.MAS_SORA_API ||
-    process.env.VITE_MAS_API_KEY ||
-    req.query?.apiKey ||
-    req.headers?.['keyid'] ||
-    ''
-  ).trim();
+  // Guardrail check: Read ONLY inside files in api/ directory via process.env.MAS_SORA_API
+  const rawKey = process.env.MAS_SORA_API;
+  const apiKey = rawKey ? rawKey.trim() : '';
 
-  const isKeyConfigured = Boolean(apiKey.length > 0 && !apiKey.includes('MY_MAS_SORA_API'));
+  // If credential is missing at runtime, return HTTP 500 with {"error":"credential not configured"} rather than calling the provider without it.
+  if (!apiKey || apiKey === 'MY_MAS_SORA_API') {
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: 'credential not configured' }));
+    return;
+  }
 
   const headers: Record<string, string> = {
     'Accept': 'application/json',
     'User-Agent': 'RefinHomeLoan-MAS-Client/1.0',
+    'KeyId': apiKey,
   };
 
-  if (isKeyConfigured) {
-    headers['KeyId'] = apiKey;
-    headers['keyId'] = apiKey;
-    headers['apikey'] = apiKey;
-  }
-
-  // 1. Try MAS Primary Gateway
+  // 1. Try MAS Primary Gateway with credential
   try {
     const url = `${MAS_PRIMARY_ENDPOINT}?rows=10&sort=end_of_day%20desc`;
     const response = await fetch(url, {
@@ -147,7 +143,7 @@ export default async function handler(req: any, res: any) {
 
       if (records.length > 0) {
         for (const rec of records) {
-          const parsed = parseRecord(rec, 'MAS Domestic Interest Rates Gateway (Live SORA)', true, isKeyConfigured);
+          const parsed = parseRecord(rec, 'MAS Domestic Interest Rates Gateway (Live SORA)');
           if (parsed) {
             res.setHeader('Content-Type', 'application/json');
             res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
@@ -162,12 +158,12 @@ export default async function handler(req: any, res: any) {
     console.warn('MAS Primary endpoint error:', e);
   }
 
-  // 2. Try MAS DataStore endpoint
+  // 2. Try MAS DataStore endpoint with credential
   try {
-    const fallbackHeaders: Record<string, string> = { 'Accept': 'application/json' };
-    if (isKeyConfigured) {
-      fallbackHeaders['KeyId'] = apiKey;
-    }
+    const fallbackHeaders: Record<string, string> = {
+      'Accept': 'application/json',
+      'KeyId': apiKey,
+    };
     const response = await fetch(MAS_DATASTORE_ENDPOINT, {
       method: 'GET',
       headers: fallbackHeaders,
@@ -178,7 +174,7 @@ export default async function handler(req: any, res: any) {
       const records = data?.result?.records;
       if (Array.isArray(records) && records.length > 0) {
         for (const rec of records) {
-          const parsed = parseRecord(rec, 'MAS Domestic Interest Rates - DataStore (Live SORA)', true, isKeyConfigured);
+          const parsed = parseRecord(rec, 'MAS Domestic Interest Rates - DataStore (Live SORA)');
           if (parsed) {
             res.setHeader('Content-Type', 'application/json');
             res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
@@ -193,7 +189,7 @@ export default async function handler(req: any, res: any) {
     console.warn('MAS DataStore fallback error:', e);
   }
 
-  // 3. Try MAS Secondary Statistical Bulletin endpoint
+  // 3. Try MAS Secondary Statistical Bulletin endpoint with credential
   try {
     const url = `${MAS_SECONDARY_ENDPOINT}?rows=10&sort=end_of_day%20desc`;
     const response = await fetch(url, {
@@ -206,9 +202,10 @@ export default async function handler(req: any, res: any) {
       const records = data?.result?.records || data?.records || (Array.isArray(data) ? data : []);
       if (records.length > 0) {
         for (const rec of records) {
-          const parsed = parseRecord(rec, 'MAS Monthly Statistical Bulletin Gateway (Live SORA)', true, isKeyConfigured);
+          const parsed = parseRecord(rec, 'MAS Monthly Statistical Bulletin Gateway (Live SORA)');
           if (parsed) {
             res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
             res.statusCode = 200;
             res.end(JSON.stringify(parsed));
             return;
@@ -220,24 +217,8 @@ export default async function handler(req: any, res: any) {
     console.warn('MAS Secondary endpoint error:', e);
   }
 
-  // 4. Return standard response structure
-  const today = new Date().toISOString().split('T')[0];
-  const responseData = {
-    soraComp1M: 2.42,
-    soraComp3M: 2.45,
-    soraComp6M: 2.48,
-    soraDaily: 2.40,
-    asOfDate: today,
-    source: 'MAS Domestic Interest Rates (Daily Compounded SORA)',
-    endpointUrl: MAS_PRIMARY_ENDPOINT,
-    isLive: false,
-    apiKeyConfigured: isKeyConfigured,
-    statusMessage: isKeyConfigured
-      ? `MAS_SORA_API active. 1M SORA: 2.42% | 3M SORA: 2.45% | 6M SORA: 2.48% p.a.`
-      : `MAS Domestic Interest Rates. 1M SORA: 2.42% | 3M SORA: 2.45% | 6M SORA: 2.48% p.a.`
-  };
-
+  // If the provider returned an unparseable response or upstream error
+  res.statusCode = 502;
   res.setHeader('Content-Type', 'application/json');
-  res.statusCode = 200;
-  res.end(JSON.stringify(responseData));
+  res.end(JSON.stringify({ error: 'MAS API provider returned unexpected response' }));
 }

@@ -63,8 +63,8 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
     asOfDate: new Date().toISOString().split('T')[0],
     source: 'MAS Domestic Interest Rates Gateway',
     isLive: false,
-    apiKeyConfigured: Boolean(import.meta.env.MAS_SORA_API || import.meta.env.VITE_MAS_API_KEY),
-    statusMessage: 'Ready to query MAS Domestic Interest Rates dataset under MAS_SORA_API.'
+    apiKeyConfigured: false,
+    statusMessage: 'Ready to query MAS Domestic Interest Rates via /api/mas-sora.'
   });
   const [isRefreshingMas, setIsRefreshingMas] = useState<boolean>(false);
 
