@@ -1,8 +1,6 @@
 import { LoanParameters, QuotationPackage, PackageCostAnalysis, LoanCalculationSummary } from '../types';
-import { DEFAULT_MAS_3M_SORA } from '../services/masApi';
 
-export { DEFAULT_MAS_3M_SORA };
-export const CURRENT_3M_SORA = DEFAULT_MAS_3M_SORA; // Real-time 3M Compounded SORA benchmark %
+export const CURRENT_3M_SORA = 2.45; // Baseline 3M Compounded SORA benchmark %
 
 export const DEFAULT_LOAN_PARAMS: LoanParameters = {
   propertyType: 'private',
@@ -108,7 +106,7 @@ export function calculateMonthlyPayment(principal: number, annualRatePercent: nu
 export function analyzeQuotationCost(
   loanParams: LoanParameters,
   quotation: QuotationPackage,
-  activeSoraBenchmark: number = DEFAULT_MAS_3M_SORA
+  activeSoraBenchmark: number = CURRENT_3M_SORA
 ): Omit<PackageCostAnalysis, 'isLowestCost' | 'costRank'> {
   const currentMonthly = calculateMonthlyPayment(
     loanParams.outstandingPrinciple,
@@ -167,7 +165,7 @@ export function analyzeQuotationCost(
 export function computeComprehensiveSummary(
   loanParams: LoanParameters,
   quotations: QuotationPackage[],
-  activeSoraBenchmark: number = DEFAULT_MAS_3M_SORA,
+  activeSoraBenchmark: number = CURRENT_3M_SORA,
   soraMeta?: { asOfDate?: string; source?: string }
 ): LoanCalculationSummary {
   const currentMonthlyPayment = calculateMonthlyPayment(

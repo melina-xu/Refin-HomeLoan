@@ -3,8 +3,7 @@ import { LoanParameters, QuotationPackage, LoanCalculationSummary, PackageCostAn
 import { 
   DEFAULT_QUOTATION_PACKAGES, 
   computeComprehensiveSummary, 
-  POPULAR_BANKS, 
-  DEFAULT_MAS_3M_SORA
+  POPULAR_BANKS 
 } from '../data/mockRates';
 import { QuotationCardEditor } from './QuotationCardEditor';
 import { fetchMasDomesticInterestRates, MasDomesticInterestRateResponse } from '../services/masApi';
@@ -57,12 +56,12 @@ export const ProjectedAlphaScreen: React.FC<ProjectedAlphaScreenProps> = ({
 }) => {
   // MAS API state
   const [masRateData, setMasRateData] = useState<MasDomesticInterestRateResponse>({
-    soraComp3M: DEFAULT_MAS_3M_SORA,
     soraComp1M: 2.42,
+    soraComp3M: 2.45,
     soraComp6M: 2.48,
     soraDaily: 2.40,
     asOfDate: new Date().toISOString().split('T')[0],
-    source: 'MAS Domestic Interest Rates - Daily Gateway',
+    source: 'MAS Domestic Interest Rates Gateway',
     isLive: false,
     apiKeyConfigured: Boolean(import.meta.env.MAS_SORA_API || import.meta.env.VITE_MAS_API_KEY),
     statusMessage: 'Ready to query MAS Domestic Interest Rates dataset under MAS_SORA_API.'
